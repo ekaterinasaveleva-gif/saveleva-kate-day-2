@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Case pipeline · Mediation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --slack-purple: #4A154B;
+      --slack-purple-hover: #611f69;
+      --slack-sidebar: #3f0e40;
+      --bg-main: #f0efe9;
+      --bg-panel: #ffffff;
+      --border: #e8e6e1;
+      --text: #1d1c1d;
+      --text-muted: #616061;
+      --accent: #1264a3;
+      --accent-soft: #e8f4fc;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-main);
+      min-height: 100vh;
+      color: var(--text);
+      display: flex;
+    }
+
+    .sidebar {
+      width: 220px;
+      min-height: 100vh;
+      background: var(--slack-sidebar);
+      padding: 1rem 0;
+      flex-shrink: 0;
+    }
+    .workspace-name {
+      padding: 0 1rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 0.75rem;
+    }
+    .workspace-name span {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      color: rgba(255, 255, 255, 0.85);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+    .nav-item.active {
+      background: var(--slack-purple);
+      border-left-color: #fff;
+      color: #fff;
+    }
+    .nav-item::before {
+      content: "●";
+      margin-right: 0.5rem;
+      font-size: 0.5rem;
+      opacity: 0.8;
+    }
+
+    .app {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    header {
+      padding: 1rem 1.5rem;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    header h1 {
+      margin: 0 0 0.15rem 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+    header p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    main {
+      display: flex;
+      gap: 1rem;
+      padding: 1.25rem 1.5rem;
+      align-items: flex-start;
+      min-height: calc(100vh - 120px);
+      overflow-x: auto;
+    }
+    section {
+      flex: 0 0 300px;
+      background: var(--bg-panel);
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      max-height: calc(100vh - 140px);
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    section:hover {
+      box-shadow: var(--shadow-hover);
+    }
+    section h2 {
+      margin: 0 0 0.75rem 0;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-radius: var(--radius-sm);
+    }
+    section[data-list="New leads"] h2 { background: #f4e8f8; color: #611f69; }
+    section[data-list="In mediation"] h2 { background: #e8f0fe; color: #1967d2; }
+    section[data-list="Settled"] h2 { background: #e6f4ea; color: #137333; }
+    section[data-list="Closed"] h2 { background: #f1f3f4; color: #5f6368; }
+
+    .cards {
+      flex: 1;
+      min-height: 40px;
+      overflow-y: auto;
+    }
+    article {
+      background: var(--bg-panel);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 0.85rem;
+      margin-bottom: 0.5rem;
+      border: 1px solid var(--border);
+      cursor: grab;
+      position: relative;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+    article:hover {
+      border-color: #c5c2bc;
+      box-shadow: var(--shadow);
+    }
+    article:last-child {
+      margin-bottom: 0;
+    }
+    article:active {
+      cursor: grabbing;
+    }
+    article.dragging {
+      opacity: 0.6;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+    article h3 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      padding-right: 1.5rem;
+    }
+    article .meta {
+      margin-top: 0.35rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .add-card {
+      padding: 0.6rem 0.75rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      margin-top: 0.5rem;
+      transition: background 0.15s, color 0.15s;
+    }
+    .add-card:hover {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .add-card.hidden {
+      display: none;
+    }
+    .card-form {
+      display: none;
+      padding: 0.5rem 0;
+    }
+    .card-form.active {
+      display: block;
+    }
+    .card-form input {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 2px solid var(--accent);
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      font-family: inherit;
+    }
+    .card-form input:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+    .card-form input::placeholder {
+      color: #9b9a97;
+    }
+    .card-form .actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .card-form button {
+      padding: 0.5rem 1rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .card-form button:hover {
+      background: #0d4d82;
+    }
+    .card-form button.cancel {
+      background: transparent;
+      color: var(--text-muted);
+    }
+    .card-form button.cancel:hover {
+      background: var(--border);
+      color: var(--text);
+    }
+    section.drag-over {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+    }
+    .card-remove {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      width: 1.5rem;
+      height: 1.5rem;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 4px;
+      font-size: 1.1rem;
+      line-height: 1;
+      cursor: pointer;
+      opacity: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.15s, background 0.15s, color 0.15s;
+    }
+    article:hover .card-remove {
+      opacity: 1;
+    }
+    .card-remove:hover {
+      background: #fce8e8;
+      color: #c5221f;
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="workspace-name">
+      <span>MediateCo</span>
+    </div>
+    <a href="#" class="nav-item active">Case pipeline</a>
+    <a href="#" class="nav-item">Clients</a>
+    <a href="#" class="nav-item">Calendar</a>
+  </aside>
+
+  <div class="app">
+    <header>
+      <h1>Case pipeline</h1>
+      <p>Track leads and cases — drag cards to update stage</p>
+    </header>
+
+    <main>
+      <section data-list="New leads">
+        <h2>New leads</h2>
+        <div class="cards">
+          <article draggable="true">
+            <button type="button" class="card-remove" aria-label="Remove card">×</button>
+            <h3>Greenfield Ltd — Contract dispute</h3>
+            <p class="meta">Inquiry 2 Mar</p>
+          </article>
+          <article draggable="true">
+            <button type="button" class="card-remove" aria-label="Remove card">×</button>
+            <h3>Sarah Chen — Employment</h3>
+            <p class="meta">Inquiry 3 Mar</p>
+          </article>
+          <article draggable="true">
+            <button type="button" class="card-remove" aria-label="Remove card">×</button>
+            <h3>Northgate Partners — Commercial</h3>
+            <p class="meta">Inquiry 4 Mar</p>
+          </article>
+        </div>
+        <div class="add-card">+ Add case or lead</div>
+        <div class="card-form">
+          <input type="text" placeholder="e.g. Client name — Dispute type" maxlength="512">
+          <div class="actions">
+            <button type="button" class="add">Add</button>
+            <button type="button" class="cancel">Cancel</button>
+          </div>
+        </div>
+      </section>
+
+      <section data-list="In mediation">
+        <h2>In mediation</h2>
+        <div class="cards">
+          <article draggable="true">
+            <button type="button" class="card-remove" aria-label="Remove card">×</button>
+            <h3>Smith &amp; Jones — Property</h3>
+            <p class="meta">Session 10 Mar</p>
+          </article>
+          <article draggable="true">
+            <button type="button" class="card-remove" aria-label="Remove card">×</button>
+            <h3>ABC Corp — IP dispute</h3>
+            <p class="meta">Ongoing</p>
+          </article>
+        </div>
+        <div class="add-card">+ Add case or lead</div>
+        <div class="card-form">
+          <input type="text" placeholder="e.g. Client name — Dispute type" maxlength="512">
+          <div class="actions">
+            <button type="button" class="add">Add</button>
+            <button type="button" class="cancel">Cancel</button>
+          </div>
+        </div>
+      </section>
+
+      <section data-list="Settled">
+        <h2>Settled</h2>
+        <div class="cards">
+          <article draggable="true">
+            <button type="button" class="card-remove" aria-label="Remove card">×</button>
+            <h3>Williams — Neighbour dispute</h3>
+            <p class="meta">Settled 1 Mar</p>
+          </article>
+          <article draggable="true">
+            <button type="button" class="card-remove" aria-label="Remove card">×</button>
+            <h3>TechStart Inc — Partnership</h3>
+            <p class="meta">Settled 28 Feb</p>
+          </article>
+        </div>
+        <div class="add-card">+ Add case or lead</div>
+        <div class="card-form">
+          <input type="text" placeholder="e.g. Client name — Dispute type" maxlength="512">
+          <div class="actions">
+            <button type="button" class="add">Add</button>
+            <button type="button" class="cancel">Cancel</button>
+          </div>
+        </div>
+      </section>
+
+      <section data-list="Closed">
+        <h2>Closed</h2>
+        <div class="cards">
+          <article draggable="true">
+            <button type="button" class="card-remove" aria-label="Remove card">×</button>
+            <h3>Davis — Family matter</h3>
+            <p class="meta">Closed 25 Feb</p>
+          </article>
+          <article draggable="true">
+            <button type="button" class="card-remove" aria-label="Remove card">×</button>
+            <h3>Metro Logistics — Freight</h3>
+            <p class="meta">Closed 20 Feb</p>
+          </article>
+        </div>
+        <div class="add-card">+ Add case or lead</div>
+        <div class="card-form">
+          <input type="text" placeholder="e.g. Client name — Dispute type" maxlength="512">
+          <div class="actions">
+            <button type="button" class="add">Add</button>
+            <button type="button" class="cancel">Cancel</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      var main = document.querySelector('main');
+
+      // ——— Add card ———
+      main.addEventListener('click', function (e) {
+        var addCard = e.target.closest('.add-card');
+        if (!addCard) return;
+        var section = addCard.closest('section');
+        var form = section.querySelector('.card-form');
+        addCard.classList.add('hidden');
+        form.classList.add('active');
+        form.querySelector('input').focus();
+      });
+
+      main.addEventListener('click', function (e) {
+        if (e.target.classList.contains('add')) {
+          var form = e.target.closest('.card-form');
+          var input = form.querySelector('input');
+          var title = input.value.trim();
+          if (title) {
+            var cards = form.closest('section').querySelector('.cards');
+            var article = document.createElement('article');
+            article.setAttribute('draggable', 'true');
+            article.innerHTML = '<button type="button" class="card-remove" aria-label="Remove card">×</button><h3>' + escapeHtml(title) + '</h3>';
+            cards.appendChild(article);
+            initCard(article);
+            input.value = '';
+          }
+          form.classList.remove('active');
+          form.closest('section').querySelector('.add-card').classList.remove('hidden');
+        }
+        if (e.target.classList.contains('cancel')) {
+          var form = e.target.closest('.card-form');
+          form.classList.remove('active');
+          form.closest('section').querySelector('.add-card').classList.remove('hidden');
+          form.querySelector('input').value = '';
+        }
+      });
+
+      main.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        var input = e.target.closest('.card-form input');
+        if (!input) return;
+        e.preventDefault();
+        input.closest('.card-form').querySelector('button.add').click();
+      });
+
+      function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // ——— Remove card ———
+      main.addEventListener('click', function (e) {
+        if (e.target.classList.contains('card-remove')) {
+          e.target.closest('article').remove();
+        }
+      });
+
+      // ——— Drag and drop ———
+      var draggedCard = null;
+
+      function initCard(article) {
+        article.addEventListener('dragstart', function (e) {
+          draggedCard = article;
+          article.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', '');
+        });
+        article.addEventListener('dragend', function () {
+          article.classList.remove('dragging');
+          draggedCard = null;
+          document.querySelectorAll('section').forEach(function (s) { s.classList.remove('drag-over'); });
+        });
+      }
+
+      document.querySelectorAll('section').forEach(function (section) {
+        section.addEventListener('dragover', function (e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          if (draggedCard && section.querySelector('.cards') !== draggedCard.parentNode) {
+            section.classList.add('drag-over');
+          }
+        });
+        section.addEventListener('dragleave', function (e) {
+          if (!section.contains(e.relatedTarget)) {
+            section.classList.remove('drag-over');
+          }
+        });
+        section.addEventListener('drop', function (e) {
+          e.preventDefault();
+          section.classList.remove('drag-over');
+          if (!draggedCard) return;
+          var cards = section.querySelector('.cards');
+          if (cards && cards !== draggedCard.parentNode) {
+            cards.appendChild(draggedCard);
+          }
+        });
+      });
+
+      document.querySelectorAll('article').forEach(initCard);
+    })();
+  </script>
+</body>
+</html>
