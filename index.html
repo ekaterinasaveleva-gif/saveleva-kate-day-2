@@ -306,6 +306,37 @@
       background: #fce8e8;
       color: #c5221f;
     }
+
+    /* Explosion effect when dropping a card */
+    .explosion {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 100;
+    }
+    .explosion-particle {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      --tx: 0;
+      --ty: 0;
+      transform: translate(-50%, -50%) translate(var(--tx), var(--ty));
+      animation: explosion-burst 0.6s ease-out forwards;
+    }
+    @keyframes explosion-burst {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) scale(0.2);
+      }
+    }
   </style>
 </head>
 <body>
@@ -501,6 +532,29 @@
       // ——— Drag and drop ———
       var draggedCard = null;
 
+      var explosionColors = ['#4A154B', '#611f69', '#1264a3', '#1967d2', '#137333', '#e8a0b8', '#7eb8e8', '#81c995'];
+      function explosionAt(x, y) {
+        var container = document.createElement('div');
+        container.className = 'explosion';
+        var particleCount = 18;
+        for (var i = 0; i < particleCount; i++) {
+          var angle = (i / particleCount) * Math.PI * 2 + Math.random() * 0.5;
+          var dist = 60 + Math.random() * 80;
+          var tx = Math.cos(angle) * dist;
+          var ty = Math.sin(angle) * dist;
+          var p = document.createElement('div');
+          p.className = 'explosion-particle';
+          p.style.left = x + 'px';
+          p.style.top = y + 'px';
+          p.style.setProperty('--tx', tx + 'px');
+          p.style.setProperty('--ty', ty + 'px');
+          p.style.background = explosionColors[i % explosionColors.length];
+          container.appendChild(p);
+        }
+        document.body.appendChild(container);
+        setTimeout(function () { container.remove(); }, 650);
+      }
+
       function initCard(article) {
         article.addEventListener('dragstart', function (e) {
           draggedCard = article;
@@ -535,6 +589,7 @@
           var cards = section.querySelector('.cards');
           if (cards && cards !== draggedCard.parentNode) {
             cards.appendChild(draggedCard);
+            explosionAt(e.clientX, e.clientY);
           }
         });
       });
