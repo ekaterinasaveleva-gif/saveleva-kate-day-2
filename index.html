@@ -532,6 +532,39 @@
       // ——— Drag and drop ———
       var draggedCard = null;
 
+      var audioCtx = null;
+      function initAudio() {
+        if (audioCtx) return;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      function playWaterDrop() {
+        if (!audioCtx) initAudio();
+        var ctx = audioCtx;
+        function play() {
+          var now = ctx.currentTime;
+          var osc = ctx.createOscillator();
+          var gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(180, now + 0.12);
+          osc.frequency.setValueAtTime(180, now + 0.15);
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(0.35, now + 0.008);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+          osc.start(now);
+          osc.stop(now + 0.22);
+        }
+        if (ctx.state === 'suspended') {
+          ctx.resume().then(play);
+        } else {
+          play();
+        }
+      }
+      document.addEventListener('click', initAudio, { once: true });
+      document.addEventListener('touchstart', initAudio, { once: true });
+
       var explosionColors = ['#4A154B', '#611f69', '#1264a3', '#1967d2', '#137333', '#e8a0b8', '#7eb8e8', '#81c995'];
       function explosionAt(x, y) {
         var container = document.createElement('div');
@@ -589,6 +622,7 @@
           var cards = section.querySelector('.cards');
           if (cards && cards !== draggedCard.parentNode) {
             cards.appendChild(draggedCard);
+            playWaterDrop();
             explosionAt(e.clientX, e.clientY);
           }
         });
